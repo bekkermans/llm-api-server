@@ -1,0 +1,20 @@
+http_options: 
+  host: 0.0.0.0
+  port: 7000
+applications:
+  - name: API
+    import_path: api:app_builder
+    args:
+      llms:
+        completions: 
+          - name: ""
+            class: "llama"
+          - name: ""
+            class: "llama.cpp"
+        embedding:
+          - name: "hkunlp/instructor-large"
+            class: "instructor" 
+          - name: "sentence-transformers/all-MiniLM-L12-v2"
+            class: "sentence-transformers"
+          - name: "all-MiniLM-L6-v2"
+            class: "sentence-transformers"
