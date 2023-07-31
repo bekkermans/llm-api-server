@@ -2,6 +2,7 @@ import logging
 from models import Generative, Embeddings
 from starlette.responses import JSONResponse
 from fastapi import FastAPI
+from api_spec import EmbeddingsRequest
 
 from ray import serve
 
@@ -37,10 +38,10 @@ class API:
                         "id": model_name,
                         "object": "model",
                         "owned_by": "Open Source",
-                        "permission": "All"
+                        "permission": "Public"
                     })
-                    logger.info(f'The model {model_name} has been \
-                        successfully loaded on device "{model_device}"')
+                    logger.info(f'The model {model_name} has been '\
+                                f'successfully loaded on device "{model_device}"')
 
     @api_app.post('/v1/completions')
     async def completions(self, model: str, prompt: str):
@@ -48,24 +49,36 @@ class API:
         return  model.generate_text(prompt)
 
     @api_app.post('/v1/embeddings')
-    async def embeddings(self, model: str, input: str, engine: str = '', user: str = ''):
-        # TODO: batch input
+    @api_app.post('/v1/engines/{model_name}/embeddings')
+    async def embeddings(self, request: EmbeddingsRequest) -> JSONResponse:
+        if request.model != None:
+            model = request.model
+        elif request.model_name != None:
+            model = request.model_name
+        elif request.engine != None:
+            model = request.engine
+        else:
+            model = ''
+        if isinstance(request.input, str):
+            request.input = [request.input]
         emb_model = self.get_model_by_name(model, 'embeddings')
         if emb_model == None:
             ret = JSONResponse({"detail": "Not Found"}, status_code=400)
         else:
-            tokens_count = emb_model.get_token_count(input)
-            logger.debug(f'Got request {input}')
-            emb = await emb_model.encode(input)
-            ret = JSONResponse({
-                "object": "list",
-                "data":[
+            tokens_count = emb_model.get_token_count(request.input)
+            emb = await emb_model.encode(request.input)
+            data_list = []
+            for i, emb_data in enumerate(emb):
+                data_list.append(
                     {
                         "object": "embedding",
-                        "embedding": emb,
-                        "index": 0
+                        "embedding": emb_data,
+                        "index": i
                     }
-                ],
+                )
+            ret = JSONResponse({
+                "object": "list",
+                "data": data_list,
                 "model": emb_model.model_name,
                 "usage": {
                     "prompt_tokens": tokens_count,
@@ -75,7 +88,7 @@ class API:
         return ret
 
     @api_app.get('/v1/models')
-    async def list_models(self):
+    async def list_models(self) -> JSONResponse:
         response = JSONResponse({
             "data": self.models_card_list,
             "object": "list"

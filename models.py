@@ -23,8 +23,8 @@ class Generative(LLM):
         self.model = self.model.to(self.device)
 
     @torch.inference_mode()
-    async def generate_text(self, prompt: str):
-        input_ids = self.tokenizer([prompt], return_tensors="pt").input_ids
+    async def generate_text(self, prompt: list):
+        input_ids = self.tokenizer(prompt, return_tensors="pt").input_ids
         input_ids = input_ids.to(self.device)
         ret = await self.model.generate(input_ids, max_length=10000)
         return ret
@@ -49,7 +49,7 @@ class Embeddings(LLM):
             self.model = self.model.to(self.device)
 
     @torch.inference_mode()
-    async def encode(self, prompt: str) -> list:
+    async def encode(self, prompt: list) -> list:
         return self.model.encode(prompt).tolist()
 
 
