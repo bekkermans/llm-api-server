@@ -56,7 +56,9 @@ class API:
         if compl_model == None:
             ret = JSONResponse({"detail": "Model not Found"}, status_code=400)
         else:
-            resp = await compl_model.generate_text(request.messages, request.n)
+            resp = await compl_model.generate_text(request.messages, 
+                                                   request.n,
+                                                   request.max_tokens)
             choises_list = []
             for idx, text in enumerate(resp['text']):
                 choises_list.append({

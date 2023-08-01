@@ -23,16 +23,26 @@ class Generative(LLM):
         self.model = self.model.to(self.device)
 
     @torch.inference_mode()
-    async def generate_text(self, prompt: list, n: int):
+    async def generate_text(self, prompts: list, n: int, max_length: int):
         results = {}
         compl_list = []
         prompt_tokens = 0
         completion_tokens = 0
-        # input_ids = self.tokenizer(prompt, return_tensors="pt").input_ids
-        # input_ids = input_ids.to(self.device)
-        # ret = await self.model.generate(input_ids, max_length=10000).to_list()
-        for i in range(n):
-            gen_text = 'hello world'
+        prompt = ''
+        if self.tokenizer.sep_token == None:
+            sep_token = '\n'
+        else:
+            sep_token = self.tokenizer.sep_token
+        for message in prompts:
+            role = message['role']
+            content = message['content']
+            prompt += f'{role}: {content}{sep_token}'
+            prompt_tokens += self.get_token_count(prompt)
+        input_ids = self.tokenizer(prompt, return_tensors="pt").input_ids
+        input_ids = input_ids.to(self.device)
+        for _ in range(n):
+            output_ids = self.model.generate(input_ids, max_length=max_length).tolist()
+            gen_text = self.tokenizer.decode(output_ids[0], skip_special_tokens=True)
             completion_tokens += self.get_token_count(gen_text)
             compl_list.append(gen_text)
         results['text'] = compl_list
