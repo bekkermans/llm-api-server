@@ -4,9 +4,16 @@ http_options:
 applications:
   - name: API
     import_path: api:app_builder
+    deployments:
+    - name: API
+      num_replicas: 1
+      ray_actor_options:
+        num_gpus: 1
     args:
       llms:
-        completions: 
+        completions:
+          - name: "microsoft/DialoGPT-large"
+            class: "causallm"
           - name: ""
             class: "llama"
           - name: ""

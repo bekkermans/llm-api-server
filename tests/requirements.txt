@@ -1,8 +1,1 @@
-requests
-torch
-transformers
-sentence_transformers
-InstructorEmbedding
-fastapi
-python-multipart
-ray[serve]
+openai

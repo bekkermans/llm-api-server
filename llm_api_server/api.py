@@ -1,4 +1,6 @@
 import logging
+import time
+import uuid
 from models import Generative, Embeddings
 from starlette.responses import JSONResponse
 from fastapi import FastAPI
@@ -10,7 +12,7 @@ logger = logging.getLogger("ray.serve")
 api_app = FastAPI()
 
 
-@serve.deployment(num_replicas=1, ray_actor_options={"num_gpus": 1})
+@serve.deployment(num_replicas=1)
 @serve.ingress(api_app)
 class API:
     def __init__(self, models_dict: dict) -> None:
@@ -24,7 +26,7 @@ class API:
             for model_params in models_list:
                 model_name = model_params['name']
                 if model_name != '':
-                    if model_params['class'] == 'llama':
+                    if model_params['class'] == 'causallm':
                         model = Generative(model_name)
                     elif (model_params['class'] == 'instructor') or \
                         (model_params['class'] == 'sentence-transformers'):
@@ -48,10 +50,37 @@ class API:
         pass
 
     @api_app.post('/v1/chat/completions')
-    async def completions(self, request: ChatCompletionsRequest) -> JSONResponse:
+    async def chatcompletions(self, request: ChatCompletionsRequest) -> JSONResponse:
         model_name = request.model
-        model = self.get_model_by_name(model_name, 'completions')
-        ret = model.generate_text(request.messages)
+        compl_model = self.get_model_by_name(model_name, 'completions')
+        if compl_model == None:
+            ret = JSONResponse({"detail": "Model not Found"}, status_code=400)
+        else:
+            resp = await compl_model.generate_text(request.messages, request.n)
+            choises_list = []
+            for idx, text in enumerate(resp['text']):
+                choises_list.append({
+                    "index": idx,
+                    "message": {
+                    "role": "assistant",
+                    "content": text,
+                    },
+                    "finish_reason": "stop"
+                })
+            cur_time = int(time.time())
+            chat_id = "chatcmpl-" + str(uuid.uuid4()).split('-')[0]
+            total_tokens = resp['prompt_tokens'] + resp['completion_tokens']
+            ret = JSONResponse({
+                "id": chat_id,
+                "object": "chat.completion",
+                "created": cur_time,
+                "choices": choises_list,
+                "usage": {
+                    "prompt_tokens": resp['prompt_tokens'],
+                    "completion_tokens": resp['completion_tokens'],
+                    "total_tokens": total_tokens
+                }
+            })
         return  ret
 
     @api_app.post('/v1/embeddings')
@@ -69,7 +98,7 @@ class API:
             request.input = [request.input]
         emb_model = self.get_model_by_name(model, 'embeddings')
         if emb_model == None:
-            ret = JSONResponse({"detail": "Not Found"}, status_code=400)
+            ret = JSONResponse({"detail": "Model not Found"}, status_code=400)
         else:
             tokens_count = emb_model.get_token_count(request.input)
             emb = await emb_model.encode(request.input)
@@ -101,7 +130,7 @@ class API:
         })
         return response
 
-    def get_model_by_name(self, model_name:str, model_task: str):
+    def get_model_by_name(self, model_name:str, model_task: str) -> object:
         if model_task == 'embeddings':
             ret =  self.embedding_models_obj_dict.get(model_name)
         elif model_task == 'completions':
