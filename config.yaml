@@ -13,7 +13,7 @@ applications:
             class: "llama.cpp"
         embedding:
           - name: "hkunlp/instructor-large"
-            class: "instructor" 
+            class: "instructor"
           - name: "sentence-transformers/all-MiniLM-L12-v2"
             class: "sentence-transformers"
           - name: "all-MiniLM-L6-v2"

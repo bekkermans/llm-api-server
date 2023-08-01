@@ -2,7 +2,7 @@ import logging
 from models import Generative, Embeddings
 from starlette.responses import JSONResponse
 from fastapi import FastAPI
-from api_spec import EmbeddingsRequest
+from api_spec import EmbeddingsRequest, CompletionsRequest, ChatCompletionsRequest
 
 from ray import serve
 
@@ -44,9 +44,15 @@ class API:
                                 f'successfully loaded on device "{model_device}"')
 
     @api_app.post('/v1/completions')
-    async def completions(self, model: str, prompt: str):
-        model = self.get_model_by_name(model, 'completions')
-        return  model.generate_text(prompt)
+    async def completions(self, request: CompletionsRequest) -> JSONResponse:
+        pass
+
+    @api_app.post('/v1/chat/completions')
+    async def completions(self, request: ChatCompletionsRequest) -> JSONResponse:
+        model_name = request.model
+        model = self.get_model_by_name(model_name, 'completions')
+        ret = model.generate_text(request.messages)
+        return  ret
 
     @api_app.post('/v1/embeddings')
     @api_app.post('/v1/engines/{model_name}/embeddings')
