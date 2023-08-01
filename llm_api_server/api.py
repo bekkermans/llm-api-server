@@ -27,7 +27,7 @@ class API:
                     if model_params['class'] == 'llama':
                         model = Generative(model_name)
                     elif (model_params['class'] == 'instructor') or \
-                        (model_name == 'sentence-transformers'):
+                        (model_params['class'] == 'sentence-transformers'):
                         model = Embeddings(model_name)
                     if model_tasks == 'completions':
                         self.completions_models_obj_dict[model_name] = model
