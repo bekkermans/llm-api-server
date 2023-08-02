@@ -1,5 +1,5 @@
 import torch.cuda
-from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStreamer
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 
 class LLM:

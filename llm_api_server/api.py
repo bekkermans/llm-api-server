@@ -11,6 +11,12 @@ from ray import serve
 logger = logging.getLogger("ray.serve")
 api_app = FastAPI()
 
+MODEL_CLASS_MAPPING = {
+    "causallm": Generative,
+    "instructor": Embeddings,
+    "sentence-transformers": Embeddings
+}
+
 
 @serve.deployment(num_replicas=1)
 @serve.ingress(api_app)
@@ -26,11 +32,8 @@ class API:
             for model_params in models_list:
                 model_name = model_params['name']
                 if model_name != '':
-                    if model_params['class'] == 'causallm':
-                        model = Generative(model_name)
-                    elif (model_params['class'] == 'instructor') or \
-                        (model_params['class'] == 'sentence-transformers'):
-                        model = Embeddings(model_name)
+                    model_class = MODEL_CLASS_MAPPING.get(model_params['class'])
+                    model = model_class(model_name)
                     if model_tasks == 'completions':
                         self.completions_models_obj_dict[model_name] = model
                     elif model_tasks == 'embedding':
