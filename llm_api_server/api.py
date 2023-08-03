@@ -1,10 +1,12 @@
 import logging
 import time
 import uuid
-from models import Generative, Embeddings
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, StreamingResponse
 from fastapi import FastAPI
+
 from api_spec import EmbeddingsRequest, CompletionsRequest, ChatCompletionsRequest
+from models.vicuna import Vicuna
+from models.sentence_llm import SentenceLLM
 
 from ray import serve
 
@@ -12,9 +14,8 @@ logger = logging.getLogger("ray.serve")
 api_app = FastAPI()
 
 MODEL_CLASS_MAPPING = {
-    "causallm": Generative,
-    "instructor": Embeddings,
-    "sentence-transformers": Embeddings
+    "vicuna": Vicuna,
+    "sentence-transformers": SentenceLLM
 }
 
 
@@ -57,36 +58,40 @@ class API:
         model_name = request.model
         compl_model = self.get_model_by_name(model_name, 'completions')
         if compl_model == None:
-            ret = JSONResponse({"detail": "Model not Found"}, status_code=400)
+            return JSONResponse({"detail": "Model not Found"}, status_code=400)
         else:
-            resp = await compl_model.generate_text(request.messages, 
-                                                   request.n,
-                                                   request.max_tokens)
-            choises_list = []
-            for idx, text in enumerate(resp['text']):
-                choises_list.append({
-                    "index": idx,
-                    "message": {
-                    "role": "assistant",
-                    "content": text,
-                    },
-                    "finish_reason": "stop"
+            if request.stream == False:
+                resp = await compl_model.generate_text(request.messages, 
+                                                    request.n,
+                                                    request.max_tokens)
+                choises_list = []
+                for idx, text in enumerate(resp['text']):
+                    choises_list.append({
+                        "index": idx,
+                        "message": {
+                        "role": "assistant",
+                        "content": text,
+                        },
+                        "finish_reason": "stop"
+                    })
+                cur_time = int(time.time())
+                chat_id = "chatcmpl-" + str(uuid.uuid4()).split('-')[0]
+                total_tokens = resp['prompt_tokens'] + resp['completion_tokens']
+                return JSONResponse({
+                    "id": chat_id,
+                    "object": "chat.completion",
+                    "created": cur_time,
+                    "choices": choises_list,
+                    "usage": {
+                        "prompt_tokens": resp['prompt_tokens'],
+                        "completion_tokens": resp['completion_tokens'],
+                        "total_tokens": total_tokens
+                    }
                 })
-            cur_time = int(time.time())
-            chat_id = "chatcmpl-" + str(uuid.uuid4()).split('-')[0]
-            total_tokens = resp['prompt_tokens'] + resp['completion_tokens']
-            ret = JSONResponse({
-                "id": chat_id,
-                "object": "chat.completion",
-                "created": cur_time,
-                "choices": choises_list,
-                "usage": {
-                    "prompt_tokens": resp['prompt_tokens'],
-                    "completion_tokens": resp['completion_tokens'],
-                    "total_tokens": total_tokens
-                }
-            })
-        return  ret
+            else:
+                return StreamingResponse(
+                    compl_model.generate_stream(request.messages,
+                                                request.max_tokens))
 
     @api_app.post('/v1/embeddings')
     @api_app.post('/v1/engines/{model_name}/embeddings')

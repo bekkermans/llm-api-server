@@ -12,15 +12,15 @@ applications:
     args:
       llms:
         completions:
-          - name: "microsoft/DialoGPT-large"
-            class: "causallm"
-          - name: ""
-            class: "llama"
-          - name: ""
-            class: "llama.cpp"
+          - name: "../models/vicuna-7b/"
+            class: "vicuna"
+          # - name: ""
+          #   class: "llama2"
+          # - name: ""
+          #   class: "llama.cpp"
         embedding:
-          - name: "hkunlp/instructor-large"
-            class: "instructor"
+          # - name: "hkunlp/instructor-large"
+          #   class: "instructor"
           - name: "sentence-transformers/all-MiniLM-L12-v2"
             class: "sentence-transformers"
           - name: "sentence-transformers/all-MiniLM-L6-v2"
