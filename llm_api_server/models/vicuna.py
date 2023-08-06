@@ -1,4 +1,6 @@
 import torch
+import json
+import uuid
 from threading import Thread
 from transformers import AutoModelForCausalLM, TextIteratorStreamer
 from models.base import GenerativeLLM
@@ -62,12 +64,29 @@ class Vicuna(GenerativeLLM):
                                  max_new_tokens=max_length)
         thread = Thread(target=self.model.generate, kwargs=generation_kwargs)
         thread.start()
-        generated_text = ""
-        for i, token in enumerate(streamer):
-            yield {
-                "text": token,
-                "usage": {
-                "prompt_tokens": prompt_tokens,
-                "completion_tokens": i,
-                },
-            }
+        return streamer
+        # for i, token in enumerate(streamer):
+        #     yield (i, token)
+        #     if i == 0:
+        #         delta = {
+        #             "role": "assistant",
+        #             }
+        #     else:
+        #         delta = {
+        #             "content": token
+        #         }
+        #     choises_list = [{
+        #         "index": i,
+        #         "delta": delta,
+        #         "finish_reason": "None"
+        #         }]
+        #     resp = {
+        #         "id": chat_id,
+        #         "object": "chat.completion",
+        #         "choices": choises_list,
+        #         "model": self.model_name,
+        #         "usage": {}
+        #     }
+        #     resp = json.dumps(resp, ensure_ascii=False)
+        #     yield f"data: {resp}\n\n"
+        # yield "data: [DONE]\n\n"

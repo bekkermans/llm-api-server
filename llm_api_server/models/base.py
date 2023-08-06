@@ -33,3 +33,7 @@ class GenerativeLLM:
     @abstractmethod
     def generate_text(self,):
         pass
+
+    @abstractmethod
+    def generate_text(self,):
+        pass

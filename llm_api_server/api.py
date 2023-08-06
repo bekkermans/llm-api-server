@@ -1,6 +1,7 @@
 import logging
 import time
 import uuid
+import json
 from starlette.responses import JSONResponse, StreamingResponse
 from fastapi import FastAPI
 
@@ -60,6 +61,7 @@ class API:
         if compl_model == None:
             return JSONResponse({"detail": "Model not Found"}, status_code=400)
         else:
+            chat_id = "chatcmpl-" + str(uuid.uuid4()).split('-')[0]
             if request.stream == False:
                 resp = await compl_model.generate_text(request.messages, 
                                                     request.n,
@@ -75,7 +77,6 @@ class API:
                         "finish_reason": "stop"
                     })
                 cur_time = int(time.time())
-                chat_id = "chatcmpl-" + str(uuid.uuid4()).split('-')[0]
                 total_tokens = resp['prompt_tokens'] + resp['completion_tokens']
                 return JSONResponse({
                     "id": chat_id,
@@ -89,9 +90,39 @@ class API:
                     }
                 })
             else:
-                return StreamingResponse(
-                    compl_model.generate_stream(request.messages,
-                                                request.max_tokens))
+                result = self.stream_generation(request, compl_model, chat_id)
+                return StreamingResponse(result,
+                                         media_type="text/event-stream")
+
+    def stream_generation(self, request, compl_model, chat_id):
+        model_name = request.model
+        stream_gen = compl_model.generate_stream(request.messages,
+                                                request.max_tokens)
+        for i, token in enumerate(stream_gen):
+            if i == 0:
+                delta = {
+                    "role": "assistant",
+                }
+            else:
+                delta = {
+                    "content": token
+                }
+            choises_list = [{
+                    "index": i,
+                    "delta": delta,
+                    "finish_reason": "None"
+                    }]
+
+            res = {
+                    "id": chat_id,
+                    "object": "chat.completion",
+                    "choices": choises_list,
+                    "model": model_name,
+                    "usage": {}
+                }
+            res = json.dumps(res, ensure_ascii=False)
+            yield f"data: {res}\n\n"
+        yield "data: [DONE]\n\n"
 
     @api_app.post('/v1/embeddings')
     @api_app.post('/v1/engines/{model_name}/embeddings')
