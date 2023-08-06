@@ -56,8 +56,10 @@ class Vicuna(GenerativeLLM):
         prompt_tokens = 0
         prompt = self.get_prompt(prompts)
         prompt_tokens += self.get_token_count(prompt)
-        streamer = TextIteratorStreamer(self.tokenizer, skip_prompt=True,
-            decode_kwargs={"skip_special_tokens": True})
+        decode_config = dict(skip_special_tokens=True, 
+                             spaces_between_special_tokens=False,
+                             skip_prompt=True)
+        streamer = TextIteratorStreamer(self.tokenizer, **decode_config)
         input_ids = self.tokenizer(prompt, return_tensors="pt")
         input_ids = {k: v.to(self.device) for k, v in input_ids.items()}
         generation_kwargs = dict(input_ids, streamer=streamer,
@@ -65,28 +67,3 @@ class Vicuna(GenerativeLLM):
         thread = Thread(target=self.model.generate, kwargs=generation_kwargs)
         thread.start()
         return streamer
-        # for i, token in enumerate(streamer):
-        #     yield (i, token)
-        #     if i == 0:
-        #         delta = {
-        #             "role": "assistant",
-        #             }
-        #     else:
-        #         delta = {
-        #             "content": token
-        #         }
-        #     choises_list = [{
-        #         "index": i,
-        #         "delta": delta,
-        #         "finish_reason": "None"
-        #         }]
-        #     resp = {
-        #         "id": chat_id,
-        #         "object": "chat.completion",
-        #         "choices": choises_list,
-        #         "model": self.model_name,
-        #         "usage": {}
-        #     }
-        #     resp = json.dumps(resp, ensure_ascii=False)
-        #     yield f"data: {resp}\n\n"
-        # yield "data: [DONE]\n\n"

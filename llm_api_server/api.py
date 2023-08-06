@@ -5,9 +5,16 @@ import json
 from starlette.responses import JSONResponse, StreamingResponse
 from fastapi import FastAPI
 
-from api_spec import EmbeddingsRequest, CompletionsRequest, ChatCompletionsRequest
 from models.vicuna import Vicuna
 from models.sentence_llm import SentenceLLM
+from api_spec import (
+    EmbeddingsRequest, 
+    CompletionsRequest, 
+    ChatCompletionsRequest,
+    EmbeddingsData,
+    EmbeddingsResponse,
+    UsageInfo,
+    ModelsResponse)
 
 from ray import serve
 
@@ -28,27 +35,6 @@ class API:
         self.completions_models_obj_dict = {}
         self.models_card_list = []
         self.load_models(models_dict)
-
-    def load_models(self, models_dict: dict) -> None:
-        for model_tasks, models_list in models_dict.items():
-            for model_params in models_list:
-                model_name = model_params['name']
-                if model_name != '':
-                    model_class = MODEL_CLASS_MAPPING.get(model_params['class'])
-                    model = model_class(model_name)
-                    if model_tasks == 'completions':
-                        self.completions_models_obj_dict[model_name] = model
-                    elif model_tasks == 'embedding':
-                        self.embedding_models_obj_dict[model_name] = model
-                    model_device = model.device
-                    self.models_card_list.append({
-                        "id": model_name,
-                        "object": "model",
-                        "owned_by": "Open Source",
-                        "permission": "Public"
-                    })
-                    logger.info(f'The model {model_name} has been '\
-                                f'successfully loaded on device "{model_device}"')
 
     @api_app.post('/v1/completions')
     async def completions(self, request: CompletionsRequest) -> JSONResponse:
@@ -94,6 +80,43 @@ class API:
                 return StreamingResponse(result,
                                          media_type="text/event-stream")
 
+    @api_app.post('/v1/embeddings')
+    @api_app.post('/v1/engines/{model_name}/embeddings')
+    async def embeddings(self, request: EmbeddingsRequest) -> JSONResponse:
+        if request.model != None:
+            model = request.model
+        elif request.model_name != None:
+            model = request.model_name
+        elif request.engine != None:
+            model = request.engine
+        else:
+            model = ''
+        if isinstance(request.input, str):
+            request.input = [request.input]
+        emb_model = self.get_model_by_name(model, 'embeddings')
+        if emb_model == None:
+            ret = JSONResponse({"detail": "Model not Found"}, status_code=400)
+        else:
+            tokens_count = emb_model.get_token_count(request.input)
+            emb = await emb_model.encode(request.input)
+            data_list = []
+            for i, emb_data in enumerate(emb):
+                data_list.append(
+                    EmbeddingsData(embedding=emb_data,
+                                   index=i).dict())
+            usage_info = UsageInfo(prompt_tokens=tokens_count, 
+                                   total_tokens=tokens_count).dict()
+            ret = JSONResponse(EmbeddingsResponse(data=data_list, 
+                                                  model=emb_model.model_name,
+                                                  usage=usage_info).dict())
+        return ret
+
+    @api_app.get('/v1/models')
+    async def list_models(self) -> JSONResponse:
+        return JSONResponse(
+            ModelsResponse(data=self.models_card_list).dict()
+        )
+
     def stream_generation(self, request, compl_model, chat_id):
         model_name = request.model
         stream_gen = compl_model.generate_stream(request.messages,
@@ -124,52 +147,26 @@ class API:
             yield f"data: {res}\n\n"
         yield "data: [DONE]\n\n"
 
-    @api_app.post('/v1/embeddings')
-    @api_app.post('/v1/engines/{model_name}/embeddings')
-    async def embeddings(self, request: EmbeddingsRequest) -> JSONResponse:
-        if request.model != None:
-            model = request.model
-        elif request.model_name != None:
-            model = request.model_name
-        elif request.engine != None:
-            model = request.engine
-        else:
-            model = ''
-        if isinstance(request.input, str):
-            request.input = [request.input]
-        emb_model = self.get_model_by_name(model, 'embeddings')
-        if emb_model == None:
-            ret = JSONResponse({"detail": "Model not Found"}, status_code=400)
-        else:
-            tokens_count = emb_model.get_token_count(request.input)
-            emb = await emb_model.encode(request.input)
-            data_list = []
-            for i, emb_data in enumerate(emb):
-                data_list.append(
-                    {
-                        "object": "embedding",
-                        "embedding": emb_data,
-                        "index": i
-                    }
-                )
-            ret = JSONResponse({
-                "object": "list",
-                "data": data_list,
-                "model": emb_model.model_name,
-                "usage": {
-                    "prompt_tokens": tokens_count,
-                    "total_tokens": tokens_count
-                }
-            })
-        return ret
-
-    @api_app.get('/v1/models')
-    async def list_models(self) -> JSONResponse:
-        response = JSONResponse({
-            "data": self.models_card_list,
-            "object": "list"
-        })
-        return response
+    def load_models(self, models_dict: dict) -> None:
+        for model_tasks, models_list in models_dict.items():
+            for model_params in models_list:
+                model_name = model_params['name']
+                if model_name != '':
+                    model_class = MODEL_CLASS_MAPPING.get(model_params['class'])
+                    model = model_class(model_name)
+                    if model_tasks == 'completions':
+                        self.completions_models_obj_dict[model_name] = model
+                    elif model_tasks == 'embedding':
+                        self.embedding_models_obj_dict[model_name] = model
+                    model_device = model.device
+                    self.models_card_list.append({
+                        "id": model_name,
+                        "object": "model",
+                        "owned_by": "Open Source",
+                        "permission": "Public"
+                    })
+                    logger.info(f'The model {model_name} has been '\
+                                f'successfully loaded on device "{model_device}"')
 
     def get_model_by_name(self, model_name:str, model_task: str) -> object:
         if model_task == 'embeddings':

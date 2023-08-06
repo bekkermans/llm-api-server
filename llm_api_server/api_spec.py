@@ -2,12 +2,31 @@ from typing import Optional, List, Dict, Union, Any
 from pydantic import BaseModel
 
 
+class UsageInfo(BaseModel):
+    prompt_tokens: Optional[int] = 0
+    completion_tokens: Optional[int]
+    total_tokens: Optional[int] = 0
+
+
 class EmbeddingsRequest(BaseModel):
     model: Optional[str] = None
     model_name: Optional[str] = None
     engine: Optional[str] = None
     input: Union[str, List[str]]
     user: Optional[str] = None
+
+
+class EmbeddingsData(BaseModel):
+    object: Optional[str] = "embedding"
+    embedding: List[Any]
+    index: int
+
+
+class EmbeddingsResponse(BaseModel):
+    object: Optional[str] = "list"
+    data: List
+    model: str
+    usage: UsageInfo
 
 
 class CompletionsRequest(BaseModel):
@@ -41,3 +60,8 @@ class ChatCompletionsRequest(BaseModel):
     frequency_penalty: Optional[float] = 0.0
     logit_bias: Optional[Dict] = None
     user: Optional[str] = None
+
+
+class ModelsResponse(BaseModel):
+    object: Optional[str] = "list"
+    data: List
