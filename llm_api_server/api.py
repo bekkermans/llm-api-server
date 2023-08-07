@@ -8,8 +8,9 @@ from fastapi import FastAPI
 from models.vicuna import Vicuna
 from models.sentence_llm import SentenceLLM
 from api_spec import (
-    EmbeddingsRequest, 
-    CompletionsRequest, 
+    EmbeddingsRequest,
+    CompletionsRequest,
+    CompletionsMessage,
     ChatCompletionsRequest,
     EmbeddingsData,
     EmbeddingsResponse,
@@ -49,17 +50,13 @@ class API:
         else:
             chat_id = "chatcmpl-" + str(uuid.uuid4()).split('-')[0]
             if request.stream == False:
-                resp = await compl_model.generate_text(request.messages, 
-                                                    request.n,
-                                                    request.max_tokens)
+                resp = await compl_model.generate_text(request)
                 choises_list = []
                 for idx, text in enumerate(resp['text']):
                     choises_list.append({
                         "index": idx,
-                        "message": {
-                        "role": "assistant",
-                        "content": text,
-                        },
+                        "message": CompletionsMessage(role="assistant",
+                                                      content=text).dict(),
                         "finish_reason": "stop"
                     })
                 cur_time = int(time.time())
@@ -69,11 +66,9 @@ class API:
                     "object": "chat.completion",
                     "created": cur_time,
                     "choices": choises_list,
-                    "usage": {
-                        "prompt_tokens": resp['prompt_tokens'],
-                        "completion_tokens": resp['completion_tokens'],
-                        "total_tokens": total_tokens
-                    }
+                    "usage": UsageInfo(prompt_tokens=resp['prompt_tokens'],
+                                       completion_tokens=resp['completion_tokens'],
+                                       total_tokens=total_tokens).dict()
                 })
             else:
                 result = self.stream_generation(request, compl_model, chat_id)
@@ -119,32 +114,28 @@ class API:
 
     def stream_generation(self, request, compl_model, chat_id):
         model_name = request.model
-        stream_gen = compl_model.generate_stream(request.messages,
-                                                request.max_tokens)
-        for i, token in enumerate(stream_gen):
-            if i == 0:
-                delta = {
-                    "role": "assistant",
-                }
-            else:
-                delta = {
-                    "content": token
-                }
-            choises_list = [{
-                    "index": i,
-                    "delta": delta,
-                    "finish_reason": "None"
-                    }]
-
-            res = {
-                    "id": chat_id,
-                    "object": "chat.completion",
-                    "choices": choises_list,
-                    "model": model_name,
-                    "usage": {}
-                }
-            res = json.dumps(res, ensure_ascii=False)
-            yield f"data: {res}\n\n"
+        for k in range(request.n):
+            stream_gen = compl_model.generate_stream(request)
+            for i, token in enumerate(stream_gen):
+                if i == 0:
+                    delta = {"role": "assistant"}
+                else:
+                    delta = {"content": token}
+                choises_list = [{
+                        "index": k,
+                        "delta": delta,
+                        "finish_reason": "None"
+                        }]
+                cur_time = int(time.time())
+                res = {
+                        "id": chat_id,
+                        "created": cur_time,
+                        "object": "chat.completion.chunk",
+                        "choices": choises_list,
+                        "model": model_name,
+                    }
+                res = json.dumps(res, ensure_ascii=False)
+                yield f"data: {res}\n\n"
         yield "data: [DONE]\n\n"
 
     def load_models(self, models_dict: dict) -> None:

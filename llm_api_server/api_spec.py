@@ -62,6 +62,11 @@ class ChatCompletionsRequest(BaseModel):
     user: Optional[str] = None
 
 
+class CompletionsMessage(BaseModel):
+    role: Optional[str] = ""
+    content: Optional[str] = ""
+
+
 class ModelsResponse(BaseModel):
     object: Optional[str] = "list"
     data: List

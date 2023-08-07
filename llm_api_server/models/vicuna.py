@@ -1,8 +1,9 @@
 import torch
 import json
 import uuid
+from api_spec import ChatCompletionsRequest
 from threading import Thread
-from transformers import AutoModelForCausalLM, TextIteratorStreamer
+from transformers import AutoModelForCausalLM, TextIteratorStreamer, GenerationConfig
 from models.base import GenerativeLLM
 
 
@@ -29,18 +30,24 @@ class Vicuna(GenerativeLLM):
         return prompt
 
     @torch.inference_mode()
-    async def generate_text(self, prompts: list, n: int, max_length: int) -> dict:
+    async def generate_text(self, request: ChatCompletionsRequest) -> dict:
         results = {}
         compl_list = []
         prompt_tokens = 0
         completion_tokens = 0
-        prompt = self.get_prompt(prompts)
+        prompt = self.get_prompt(request.messages)
         prompt_tokens += self.get_token_count(prompt)
         input_ids = self.tokenizer(prompt, return_tensors="pt")
         input_ids = {k: v.to(self.device) for k, v in input_ids.items()}
-        for _ in range(n):
+        generation_config = GenerationConfig(
+            max_new_tokens=request.max_tokens,
+            do_sample=request.temperature >= 1e-3,
+            temperature=request.temperature,
+            top_p=request.top_p)
+
+        for _ in range(request.n):
             output_ids = self.model.generate(**input_ids, 
-                                             max_length=max_length).tolist()
+                                             generation_config=generation_config).tolist()
             gen_text = self.tokenizer.decode(output_ids[0][prompt_tokens :],
                                              skip_special_tokens=True,
                                              spaces_between_special_tokens=False)
@@ -52,10 +59,15 @@ class Vicuna(GenerativeLLM):
         return results
 
     @torch.inference_mode()
-    def generate_stream(self, prompts: list, max_length: int):
+    def generate_stream(self, request: ChatCompletionsRequest):
         prompt_tokens = 0
-        prompt = self.get_prompt(prompts)
+        prompt = self.get_prompt(request.messages)
         prompt_tokens += self.get_token_count(prompt)
+        generation_config = GenerationConfig(
+        max_new_tokens=request.max_tokens,
+        do_sample=request.temperature >= 1e-3,
+        temperature=request.temperature,
+        top_p=request.top_p)
         decode_config = dict(skip_special_tokens=True, 
                              spaces_between_special_tokens=False,
                              skip_prompt=True)
@@ -63,7 +75,7 @@ class Vicuna(GenerativeLLM):
         input_ids = self.tokenizer(prompt, return_tensors="pt")
         input_ids = {k: v.to(self.device) for k, v in input_ids.items()}
         generation_kwargs = dict(input_ids, streamer=streamer,
-                                 max_new_tokens=max_length)
+                                generation_config=generation_config)
         thread = Thread(target=self.model.generate, kwargs=generation_kwargs)
         thread.start()
         return streamer
