@@ -39,7 +39,63 @@ class API:
 
     @api_app.post('/v1/completions')
     async def completions(self, request: CompletionsRequest) -> JSONResponse:
-        pass
+        prompt_list = []
+        if isinstance(request.prompt, str):
+            prompt_list.append({
+                "role" : "user",
+                "content": request.prompt
+            })
+        else:
+            for text in request.prompt:
+                prompt_list.append({
+                "role" : "user",
+                "content": text
+            })
+        req = ChatCompletionsRequest(
+            model=request.model,
+            messages=prompt_list,
+            temperature=request.temperature,
+            top_p=request.top_p,
+            n=request.n,
+            stream=request.stream,
+            max_tokens=request.max_tokens,
+            presence_penalty=request.presence_penalty,
+            frequency_penalty=request.frequency_penalty,
+            logit_bias=request.logit_bias,
+            user=request.user
+            )
+        model_name = req.model
+        compl_model = self.get_model_by_name(model_name, 'completions')
+        if compl_model == None:
+            return JSONResponse({"detail": "Model not Found"}, status_code=400)
+        else:
+            chat_id = "cmpl-" + str(uuid.uuid4()).split('-')[0]
+            if request.stream == False:
+                resp = await compl_model.generate_text(req)
+                choises_list = []
+                for idx, text in enumerate(resp['text']):
+                    choises_list.append({
+                        "index": idx,
+                        "text": text,
+                        "finish_reason": "stop"
+                    })
+                cur_time = int(time.time())
+                total_tokens = resp['prompt_tokens'] + resp['completion_tokens']
+                return JSONResponse({
+                    "id": chat_id,
+                    "object": "text_completion",
+                    "created": cur_time,
+                    "choices": choises_list,
+                    "usage": UsageInfo(prompt_tokens=resp['prompt_tokens'],
+                                       completion_tokens=resp['completion_tokens'],
+                                       total_tokens=total_tokens).dict()
+                })
+            else:
+                result = self.stream_generation(req, compl_model, 
+                                                chat_id,
+                                                chat_completions=False)
+                return StreamingResponse(result,
+                                         media_type="text/event-stream")
 
     @api_app.post('/v1/chat/completions')
     async def chatcompletions(self, request: ChatCompletionsRequest) -> JSONResponse:
@@ -112,28 +168,43 @@ class API:
             ModelsResponse(data=self.models_card_list).dict()
         )
 
-    def stream_generation(self, request, compl_model, chat_id):
+    def stream_generation(self, request, compl_model, chat_id, 
+                          chat_completions=True):
         model_name = request.model
         for k in range(request.n):
             stream_gen = compl_model.generate_stream(request)
             for i, token in enumerate(stream_gen):
-                if i == 0:
-                    delta = {"role": "assistant"}
-                else:
-                    delta = {"content": token}
-                choises_list = [{
-                        "index": k,
-                        "delta": delta,
-                        "finish_reason": "None"
-                        }]
                 cur_time = int(time.time())
-                res = {
-                        "id": chat_id,
-                        "created": cur_time,
-                        "object": "chat.completion.chunk",
-                        "choices": choises_list,
-                        "model": model_name,
-                    }
+                if chat_completions:
+                    if i == 0:
+                        delta = {"role": "assistant"}
+                    else:
+                        delta = {"content": token}
+                    choises_list = [{
+                            "index": k,
+                            "delta": delta,
+                            "finish_reason": "None"
+                            }]
+                    res = {
+                            "id": chat_id,
+                            "created": cur_time,
+                            "object": "chat.completion.chunk",
+                            "choices": choises_list,
+                            "model": model_name,
+                        }
+                else:
+                    choises_list = [{
+                            "index": k,
+                            "text": token,
+                            "finish_reason": "None"
+                            }]
+                    res = {
+                            "id": chat_id,
+                            "created": cur_time,
+                            "object": "text_completion",
+                            "choices": choises_list,
+                            "model": model_name,
+                        }
                 res = json.dumps(res, ensure_ascii=False)
                 yield f"data: {res}\n\n"
         yield "data: [DONE]\n\n"

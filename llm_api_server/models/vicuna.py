@@ -1,6 +1,4 @@
 import torch
-import json
-import uuid
 from api_spec import ChatCompletionsRequest
 from threading import Thread
 from transformers import AutoModelForCausalLM, TextIteratorStreamer, GenerationConfig
@@ -47,7 +45,7 @@ class Vicuna(GenerativeLLM):
 
         for _ in range(request.n):
             output_ids = self.model.generate(**input_ids, 
-                                             generation_config=generation_config).tolist()
+                                generation_config=generation_config).tolist()
             gen_text = self.tokenizer.decode(output_ids[0][prompt_tokens :],
                                              skip_special_tokens=True,
                                              spaces_between_special_tokens=False)

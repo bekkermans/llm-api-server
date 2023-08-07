@@ -16,6 +16,10 @@ class EmbeddingsLLM:
         count = self.tokenizer(prompt, return_length=True, return_tensors='np')
         return int(count['length'][0])
 
+    @abstractmethod
+    def encode(self, prompt: list) -> list:
+        pass
+
 
 class GenerativeLLM:
     def __init__(self, model_name: str) -> None:
