@@ -33,11 +33,15 @@ class GenerativeLLM:
     def get_token_count(self, prompt: str) -> int:
         count = self.tokenizer(prompt, return_length=True, return_tensors='np')
         return int(count['length'][0])
-    
+
+    @abstractmethod
+    def get_prompt(self, prompts: list) -> str:
+        pass
+
     @abstractmethod
     def generate_text(self,):
         pass
 
     @abstractmethod
-    def generate_text(self,):
+    def generate_stream(self,):
         pass

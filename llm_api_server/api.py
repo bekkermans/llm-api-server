@@ -10,8 +10,10 @@ from models.sentence_llm import SentenceLLM
 from api_spec import (
     EmbeddingsRequest,
     CompletionsRequest,
-    CompletionsMessage,
+    ChatCompletionsMessage,
+    ChatCompletionsChosesList,
     ChatCompletionsRequest,
+    ChatCompletionsResponse,
     EmbeddingsData,
     EmbeddingsResponse,
     UsageInfo,
@@ -109,23 +111,17 @@ class API:
                 resp = await compl_model.generate_text(request)
                 choises_list = []
                 for idx, text in enumerate(resp['text']):
-                    choises_list.append({
-                        "index": idx,
-                        "message": CompletionsMessage(role="assistant",
-                                                      content=text).dict(),
-                        "finish_reason": "stop"
-                    })
+                    message = ChatCompletionsMessage(role="assistant",
+                                                      content=text).dict()
+                    choises_list.append(
+                        ChatCompletionsChosesList(index=idx, message=message).dict())
                 cur_time = int(time.time())
                 total_tokens = resp['prompt_tokens'] + resp['completion_tokens']
-                return JSONResponse({
-                    "id": chat_id,
-                    "object": "chat.completion",
-                    "created": cur_time,
-                    "choices": choises_list,
-                    "usage": UsageInfo(prompt_tokens=resp['prompt_tokens'],
+                usage_info = UsageInfo(prompt_tokens=resp['prompt_tokens'],
                                        completion_tokens=resp['completion_tokens'],
                                        total_tokens=total_tokens).dict()
-                })
+                return JSONResponse(ChatCompletionsResponse(
+                    id=chat_id,created=cur_time,choices=choises_list,usage=usage_info).dict())
             else:
                 result = self.stream_generation(request, compl_model, chat_id)
                 return StreamingResponse(result,

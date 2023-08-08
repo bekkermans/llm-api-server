@@ -62,9 +62,23 @@ class ChatCompletionsRequest(BaseModel):
     user: Optional[str] = None
 
 
-class CompletionsMessage(BaseModel):
+class ChatCompletionsMessage(BaseModel):
     role: Optional[str] = ""
     content: Optional[str] = ""
+
+
+class ChatCompletionsChosesList(BaseModel):
+    index: int
+    message: ChatCompletionsMessage
+    finish_reason: Optional[str] = "stop"
+
+
+class ChatCompletionsResponse(BaseModel):
+    id: str
+    object: Optional[str] = "chat.completion"
+    created: int
+    choices: List[ChatCompletionsChosesList]
+    usage: Optional[UsageInfo] = None
 
 
 class ModelsResponse(BaseModel):
