@@ -12,10 +12,10 @@ applications:
     args:
       llms:
         completions:
-          - name: "/models/vicuna-7b/"
+          - name: "/models/vicuna-7b"
             class: "vicuna"
         embedding:
-          - name: "sentence-transformers/all-MiniLM-L12-v2"
+          - name: "/models/all-MiniLM-L12-v2"
             class: "sentence-transformers"
-          - name: "sentence-transformers/all-MiniLM-L6-v2"
+          - name: "/models/all-MiniLM-L6-v2"
             class: "sentence-transformers"

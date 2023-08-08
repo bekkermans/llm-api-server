@@ -15,9 +15,8 @@ RUN yum update -y && \
 COPY requirements.txt /tmp/requirements.txt
 RUN pip --no-cache-dir install -r /tmp/requirements.txt
 
-# Copy models weight to the models folder
+# Create folder for models weights
 RUN mkdir -p /models
-COPY models/ /models/
 
 #Copy project files
 RUN mkdir -p /llm_api_server
@@ -29,4 +28,4 @@ WORKDIR /llm_api_server
 
 EXPOSE 7000
 
-CMD ["sh", "-c", "serve run $CONFIG_FILE_NAME"]
+CMD  ["sh", "-c", "ray start --head --port=6379 --object-manager-port=8076 --dashboard-host=0.0.0.0 && serve run $CONFIG_FILE_NAME"]
