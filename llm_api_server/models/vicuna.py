@@ -1,15 +1,28 @@
 import torch
 from api_spec import ChatCompletionsRequest
 from threading import Thread
-from transformers import AutoModelForCausalLM, TextIteratorStreamer, GenerationConfig
+from typing import Generator
+from transformers import (AutoModelForCausalLM, 
+                          TextIteratorStreamer, 
+                          AutoTokenizer, 
+                          GenerationConfig)
 from models.base import GenerativeLLM
 
 
 class Vicuna(GenerativeLLM):
-    def __init__(self, model_name: str) -> None:
-        super().__init__(model_name)
-        self.model = AutoModelForCausalLM.from_pretrained(self.model_name).half()
-        self.model = self.model.to(self.device)
+    def __init__(self, model_name: str, **kwargs) -> None:
+        self.model_name = model_name
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+        self.model = AutoModelForCausalLM.from_pretrained(self.model_name, **kwargs)
+        
+        if kwargs.get('device_map', None) == None:
+            if torch.cuda.is_available():
+                self.device = torch.device('cuda:0')
+            else:
+                self.device = torch.device('cpu')
+            self.model = self.model.to(self.device)
+        else:
+            self.device = next(self.model.parameters()).device
     
     def get_prompt(self, prompts: list) -> str:
         prompt = ''
@@ -26,6 +39,10 @@ class Vicuna(GenerativeLLM):
                 prompt += f'{role}: {content}{sep_token}'
         prompt += "assistant:"
         return prompt
+    
+    def get_token_count(self, prompt: str) -> int:
+        count = self.tokenizer(prompt, return_length=True, return_tensors='np')
+        return int(count['length'][0])
 
     @torch.inference_mode()
     async def generate_text(self, request: ChatCompletionsRequest) -> dict:
@@ -57,7 +74,7 @@ class Vicuna(GenerativeLLM):
         return results
 
     @torch.inference_mode()
-    def generate_stream(self, request: ChatCompletionsRequest):
+    def generate_stream(self, request: ChatCompletionsRequest) -> Generator:
         prompt_tokens = 0
         prompt = self.get_prompt(request.messages)
         prompt_tokens += self.get_token_count(prompt)
@@ -77,3 +94,22 @@ class Vicuna(GenerativeLLM):
         thread = Thread(target=self.model.generate, kwargs=generation_kwargs)
         thread.start()
         return streamer
+
+
+class LLAMA2(Vicuna):
+
+    def get_prompt(self, prompts: list) -> str:
+        prompt = ''
+        if self.tokenizer.eos_token == None:
+            sep_token = '\n\n'
+        else:
+            sep_token = self.tokenizer.eos_token
+        for message in prompts:
+            role = message['role']
+            content = message['content']
+            if role == 'system':
+                prompt += f'{content}{sep_token}'
+            else: 
+                prompt += f'{role}: {content}{sep_token}'
+        prompt += "assistant: "
+        return prompt

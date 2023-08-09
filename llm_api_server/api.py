@@ -5,7 +5,7 @@ import json
 from starlette.responses import JSONResponse, StreamingResponse
 from fastapi import FastAPI
 
-from models.vicuna import Vicuna
+from models.vicuna import Vicuna, LLAMA2
 from models.sentence_llm import SentenceLLM
 from api_spec import (
     EmbeddingsRequest,
@@ -26,6 +26,7 @@ api_app = FastAPI()
 
 MODEL_CLASS_MAPPING = {
     "vicuna": Vicuna,
+    "llama2": LLAMA2,
     "sentence-transformers": SentenceLLM
 }
 
@@ -211,7 +212,10 @@ class API:
                 model_name = model_params['name']
                 if model_name != '':
                     model_class = MODEL_CLASS_MAPPING.get(model_params['class'])
-                    model = model_class(model_name)
+                    if model_params.get('params', None) != None:
+                        model = model_class(model_name, **model_params['params'])
+                    else:
+                        model = model_class(model_name)
                     if model_tasks == 'completions':
                         self.completions_models_obj_dict[model_name] = model
                     elif model_tasks == 'embedding':
