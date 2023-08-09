@@ -10,14 +10,12 @@ CHAT_MESSAGES=[
     {"role": "user", "content": "My name is Sergey! What is your name?"},
   ]
 
-EMBEDDING_MODELS = ['sentence-transformers/all-MiniLM-L6-v2', 
-                    'sentence-transformers/all-MiniLM-L12-v2']
-COMPLETION_MODELS = ['/models/vicuna-7b/']
 
 # Test list all models method
 def model_list():
     models = openai.Model.list()
     print(models)
+    return models
 
 # Test embeddings method
 def embeddings(model_name, input):
@@ -98,12 +96,21 @@ if __name__ == '__main__':
     openai.organization = ''
     openai.api_key = ''
     
-    model_list()
+    embedding_models = []
+    complition_models = []
+
+    model_list = model_list()
+
+    for model in model_list['data']:
+        if 'complitions' in model['id'].split('/'):
+            complition_models.append(model['id'])
+        else:
+            embedding_models.append(model['id'])
     
-    for model in EMBEDDING_MODELS:
+    for model in embedding_models:
         embeddings(model, INPUT)
     
-    for model in COMPLETION_MODELS:
+    for model in complition_models:
         complition(model, INPUT[0])
         complition(model, INPUT)
         complition(model, INPUT, stream=True)
