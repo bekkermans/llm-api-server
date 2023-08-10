@@ -12,10 +12,17 @@ applications:
     args:
       llms:
         completions:
-          - name: "/models/vicuna-7b"
+          - name: "/models/vicuna-13b"
             class: "vicuna"
+            params:
+              load_in_8bit: True
+              device_map: "cuda:0"
+          - name: "/models/complitions/vicuna-7b"
+            class: "vicuna"
+            params:
+              torch_dtype: "auto"
         embedding:
-          - name: "/models/all-MiniLM-L12-v2"
+          - name: "/models/embeddings/all-MiniLM-L12-v2"
             class: "sentence-transformers"
-          - name: "/models/all-MiniLM-L6-v2"
+          - name: "/models/embeddings/all-MiniLM-L6-v2"
             class: "sentence-transformers"

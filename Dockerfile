@@ -22,8 +22,6 @@ RUN mkdir -p /models
 RUN mkdir -p /llm_api_server
 COPY llm_api_server/ /llm_api_server
 
-#Copy config file
-COPY ${CONFIG_FILE_NAME} /llm_api_server/${CONFIG_FILE_NAME}
 WORKDIR /llm_api_server
 
 EXPOSE 7000
