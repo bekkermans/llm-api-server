@@ -100,16 +100,13 @@ class LLAMA2(Vicuna):
 
     def get_prompt(self, prompts: list) -> str:
         prompt = ''
-        if self.tokenizer.eos_token == None:
-            sep_token = '\n\n'
-        else:
-            sep_token = self.tokenizer.eos_token
         for message in prompts:
             role = message['role']
             content = message['content']
             if role == 'system':
-                prompt += f'{content}{sep_token}'
+                prompt += f'[INST] <<SYS>>\n{content}\n<</SYS>>\n\n'
+            elif role == 'assistant':
+                prompt += f" {content}"
             else: 
-                prompt += f'{role}: {content}{sep_token}'
-        prompt += "assistant: "
+                prompt += f'[INST] {content} [/INST]'
         return prompt

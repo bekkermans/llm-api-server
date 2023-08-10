@@ -5,7 +5,7 @@ import json
 from starlette.responses import JSONResponse, StreamingResponse
 from fastapi import FastAPI
 
-from models.vicuna import Vicuna, LLAMA2
+from models.huggingface import Vicuna, LLAMA2
 from models.sentence_llm import SentenceLLM
 from api_spec import (
     EmbeddingsRequest,
