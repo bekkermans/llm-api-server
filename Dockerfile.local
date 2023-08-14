@@ -18,15 +18,9 @@ RUN pip --no-cache-dir install -r /tmp/requirements.txt
 # Create folder for models weights
 RUN mkdir -p /models
 
-# Copy models weights
-COPY models/ /models
-
 #Copy project files
 RUN mkdir -p /llm_api_server
 COPY llm_api_server/ /llm_api_server
-
-# Copy config file
-COPY ${CONFIG_FILE_NAME} /llm_api_server/${CONFIG_FILE_NAME}
 
 WORKDIR /llm_api_server
 

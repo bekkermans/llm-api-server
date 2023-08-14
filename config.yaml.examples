@@ -12,7 +12,7 @@ applications:
     args:
       llms:
         completions:
-          - name: "/models/vicuna-13b"
+          - name: "/models/complitions/vicuna-13b"
             class: "vicuna"
             params:
               load_in_8bit: True
@@ -22,7 +22,7 @@ applications:
             params:
               torch_dtype: "auto"
         embedding:
-          - name: "/models/embeddings/all-MiniLM-L12-v2"
+          - name: "/models/embeddings/instructor-large"
             class: "sentence-transformers"
           - name: "/models/embeddings/all-MiniLM-L6-v2"
             class: "sentence-transformers"
