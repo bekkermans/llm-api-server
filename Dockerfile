@@ -1,5 +1,5 @@
 
-FROM quay.io/redhat_emp1/sbekkerm-ubi9
+FROM nvcr.io/nvidia/cuda:11.8.0-base-ubi8
 
 ENV CONFIG_FILE_NAME config.yaml
 ENV RAY_SERVE_ENABLE_EXPERIMENTAL_STREAMING 1
@@ -7,26 +7,20 @@ ENV RAY_SERVE_ENABLE_EXPERIMENTAL_STREAMING 1
 # Install python 
 RUN yum update -y && \
     yum install -y \
-    python3 \
-    python3-devel && \
+    python39 \
+    python39-devel && \
     rm -rf /var/cache/yum
 
 # Install python libraries
 COPY requirements.txt /tmp/requirements.txt
-RUN pip --no-cache-dir install -r /tmp/requirements.txt
+RUN pip3 --no-cache-dir install -r /tmp/requirements.txt
 
 # Create folder for models weights
 RUN mkdir -p /models
 
-# Copy models weights
-COPY models/ /models
-
 #Copy project files
 RUN mkdir -p /llm_api_server
 COPY llm_api_server/ /llm_api_server
-
-# Copy config file
-COPY ${CONFIG_FILE_NAME} /llm_api_server/${CONFIG_FILE_NAME}
 
 WORKDIR /llm_api_server
 
