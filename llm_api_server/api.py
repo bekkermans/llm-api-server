@@ -145,7 +145,11 @@ class API:
         if emb_model == None:
             ret = JSONResponse({"detail": "Model not Found"}, status_code=400)
         else:
-            tokens_count = emb_model.get_token_count(request.input)
+            # Count the tokens in case the sentence is already tokenized
+            if isinstance(request.input[0], list):
+                tokens_count = sum(len(tokens) for tokens in request.input)
+            else:
+                tokens_count = emb_model.get_token_count(request.input)
             emb = await emb_model.encode(request.input)
             data_list = []
             for i, emb_data in enumerate(emb):
