@@ -36,5 +36,4 @@ class SentenceLLM(EmbeddingsLLM):
             # This is a limitation of sentence_transformers. It allows only 
             # string input.
             prompt = self.tokenizer.batch_decode(prompt, skip_special_tokens=True)
-        print(f'DEBUG {prompt}')
         return self.model.encode(prompt).tolist()
