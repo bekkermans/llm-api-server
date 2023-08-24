@@ -3,6 +3,7 @@ import sentence_transformers
 from InstructorEmbedding import INSTRUCTOR
 from transformers import AutoTokenizer
 from models.base import EmbeddingsLLM
+from typing import List
 
 
 class SentenceLLM(EmbeddingsLLM):
@@ -30,4 +31,10 @@ class SentenceLLM(EmbeddingsLLM):
 
     @torch.inference_mode()
     async def encode(self, prompt: list) -> list:
+        if all(isinstance(token, (list, int)) for token in prompt):
+            # Convert input to string if a sentence is already tokenized.
+            # This is a limitation of sentence_transformers. It allows only 
+            # string input.
+            prompt = self.tokenizer.batch_decode(prompt, skip_special_tokens=True)
+        print(f'DEBUG {prompt}')
         return self.model.encode(prompt).tolist()

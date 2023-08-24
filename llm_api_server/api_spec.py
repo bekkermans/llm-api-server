@@ -12,7 +12,7 @@ class EmbeddingsRequest(BaseModel):
     model: Optional[str] = None
     model_name: Optional[str] = None
     engine: Optional[str] = None
-    input: Union[str, List[Any]]
+    input: Union[str, List[str], List[List[int]]]
     user: Optional[str] = None
 
 

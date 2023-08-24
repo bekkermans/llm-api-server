@@ -2,6 +2,7 @@ import logging
 import time
 import uuid
 import json
+import tiktoken
 from starlette.responses import JSONResponse, StreamingResponse
 from fastapi import FastAPI
 
@@ -69,7 +70,7 @@ class API:
             )
         model_name = req.model
         compl_model = self.get_model_by_name(model_name, 'completions')
-        if compl_model == None:
+        if compl_model is None:
             return JSONResponse({"detail": "Model not Found"}, status_code=400)
         else:
             chat_id = "cmpl-" + str(uuid.uuid4()).split('-')[0]
@@ -104,7 +105,7 @@ class API:
     async def chatcompletions(self, request: ChatCompletionsRequest) -> JSONResponse:
         model_name = request.model
         compl_model = self.get_model_by_name(model_name, 'completions')
-        if compl_model == None:
+        if compl_model is None:
             return JSONResponse({"detail": "Model not Found"}, status_code=400)
         else:
             chat_id = "chatcmpl-" + str(uuid.uuid4()).split('-')[0]
@@ -130,24 +131,30 @@ class API:
 
     @api_app.post('/v1/embeddings')
     @api_app.post('/v1/engines/{model_name}/embeddings')
-    async def embeddings(self, request: EmbeddingsRequest) -> JSONResponse:
-        if request.model != None:
+    @api_app.post('/v1/openai/deployments/{deployment}/embeddings')
+    async def embeddings(self, request: EmbeddingsRequest,
+                         deployment:str = None) -> JSONResponse:
+        if request.model is not None:
             model = request.model
-        elif request.model_name != None:
+        elif request.model_name is not None:
             model = request.model_name
-        elif request.engine != None:
+        elif request.engine is not None:
             model = request.engine
         else:
             model = ''
-        if isinstance(request.input, str):
-            request.input = [request.input]
         emb_model = self.get_model_by_name(model, 'embeddings')
-        if emb_model == None:
+        if emb_model is None:
             ret = JSONResponse({"detail": "Model not Found"}, status_code=400)
         else:
-            # Count the tokens in case the sentence is already tokenized
-            if isinstance(request.input[0], list):
+            if isinstance(request.input, str):
+                request.input = [request.input]
+            if all(isinstance(token, (list, int)) for token in request.input):
                 tokens_count = sum(len(tokens) for tokens in request.input)
+                # Workaround for LangChain Embeddings
+                if deployment is not None:
+                    enc = tiktoken.get_encoding(deployment)
+                    input = [enc.decode(inp) for inp in request.input]
+                    request.input = input
             else:
                 tokens_count = emb_model.get_token_count(request.input)
             emb = await emb_model.encode(request.input)
@@ -216,7 +223,7 @@ class API:
                 model_name = model_params['name']
                 if model_name != '':
                     model_class = MODEL_CLASS_MAPPING.get(model_params['class'])
-                    if model_params.get('params', None) != None:
+                    if model_params.get('params', None) is not None:
                         model = model_class(model_name, **model_params['params'])
                     else:
                         model = model_class(model_name)
