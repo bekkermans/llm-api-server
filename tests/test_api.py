@@ -1,5 +1,6 @@
 import openai
 import time
+import argparse
 
 INPUT = ["Dogs don't like cats", 
          "Cats don't like dogs", 
@@ -29,8 +30,8 @@ def embeddings(model_name, input):
         }
     print(res)
 
-# Test Complition method
-def complition(model_name, input, n=1, stream=False):
+# Test Completion method
+def completion(model_name, input, n=1, stream=False):
     if not stream:
         completion = openai.Completion.create(
         model=model_name,
@@ -57,8 +58,8 @@ def complition(model_name, input, n=1, stream=False):
             collected_messages.append(chunk_message)  # save the message
             print(f"Message received {chunk_time:.2f} seconds after request: {chunk_message}")  # print the delay and text
 
-# Test ChatComplition method
-def chat_complition(model_name, input, n=1, stream=False):
+# Test ChatCompletion method
+def chat_completion(model_name, input, n=1, stream=False):
     if not stream:
         completion = openai.ChatCompletion.create(
         model=model_name,
@@ -92,27 +93,30 @@ def chat_complition(model_name, input, n=1, stream=False):
 
 
 if __name__ == '__main__':
-    openai.api_base = 'http://localhost:7000/v1'
+    parser = argparse.ArgumentParser(description='Test the LLM API Server')
+    parser.add_argument('--api_url', '-u', default='http://localhost:7000')
+    args = parser.parse_args()
+    openai.api_base = f'{args.api_url}/v1'
     openai.organization = ''
     openai.api_key = ''
     
     embedding_models = []
-    complition_models = []
+    completion_models = []
 
     model_list = model_list()
 
     for model in model_list['data']:
-        if 'complitions' in model['id'].split('/'):
-            complition_models.append(model['id'])
+        if 'completions' in model['id'].split('/'):
+            completion_models.append(model['id'])
         else:
             embedding_models.append(model['id'])
     
     for model in embedding_models:
         embeddings(model, INPUT)
     
-    for model in complition_models:
-        complition(model, INPUT[0])
-        complition(model, INPUT)
-        complition(model, INPUT, stream=True)
-        chat_complition(model, CHAT_MESSAGES)
-        chat_complition(model, CHAT_MESSAGES, stream=True)
+    for model in completion_models:
+        completion(model, INPUT[0])
+        completion(model, INPUT)
+        completion(model, INPUT, stream=True)
+        chat_completion(model, CHAT_MESSAGES)
+        chat_completion(model, CHAT_MESSAGES, stream=True)
