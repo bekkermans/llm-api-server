@@ -79,32 +79,38 @@ For each type of LLM, you can define multiple models using their name, class, an
 ### OpenAI python libray
 More information how to use `openai` python library you can find [here](https://github.com/openai/openai-python)
 ```python
-import openai
+from openai import OpenAI
 
-openai.api_base = 'http://localhost:7000/v1'
-openai.api_key = ''
-EMB_MODEL = '/models/embeddings/all-MiniLM-L6-v2'
-COMPL_MODEL = '/models/complitions/Llama-2-13b-chat-hf'
+client = OpenAI(
+    base_url = 'http://localhost:7000/v1',
+    api_key = 'RedHat',
+    organization ='YOUR_ORG_ID'
+)
+EMB_MODEL = '/models/embeddings/instructor-large'
+COMPL_MODEL = '/models/completions/Llama-2-13b-chat-hf'
 
 INPUT = ['Once upon a time']
+CHAT_MESSAGES=[
+    {"role": "system", "content": "You are a helpful assistant."},
+    {"role": "user", "content": "My name is Sergey! What is your name?"},
+  ]
 
 # List models
-models = openai.Model.list()
-print(models)
+models = client.models.list()
+print(models.data)
 
 # Create embeddings
-embedding = openai.Embedding.create(
+embedding = client.embeddings.create(
         input=INPUT,
         model=EMB_MODEL)
-
-print(embedding)
+print(embedding.data)
 
 # Text generation 
-text_completion = openai.Completion.create(
+text_completion = client.chat.completions.create(
         model=COMPL_MODEL,
         n=1,
         temperature=0.7,
-        prompt=INPUT,
+        messages=CHAT_MESSAGES,
         )
 print(text_completion)
 ```
