@@ -6,7 +6,7 @@ import tiktoken
 from starlette.responses import JSONResponse, StreamingResponse
 from fastapi import FastAPI
 
-from models.huggingface import Vicuna, LLAMA2
+from models.huggingface import Vicuna, LLAMA2, NousHermes
 from models.sentence_llm import SentenceLLM
 from api_spec import (
     EmbeddingsRequest,
@@ -28,7 +28,8 @@ api_app = FastAPI()
 MODEL_CLASS_MAPPING = {
     "vicuna": Vicuna,
     "llama2": LLAMA2,
-    "sentence-transformers": SentenceLLM
+    "sentence-transformers": SentenceLLM,
+    "nous-hermes": NousHermes
 }
 
 
