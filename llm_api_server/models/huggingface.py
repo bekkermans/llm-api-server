@@ -1,4 +1,5 @@
 import torch
+from abc import abstractmethod
 from api_spec import ChatCompletionsRequest
 from threading import Thread
 from typing import Generator
@@ -9,7 +10,7 @@ from transformers import (AutoModelForCausalLM,
 from models.base import GenerativeLLM
 
 
-class Vicuna(GenerativeLLM):
+class LLAMA2BASE(GenerativeLLM):
     def __init__(self, model_name: str, **kwargs) -> None:
         self.model_name = model_name
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
@@ -22,24 +23,12 @@ class Vicuna(GenerativeLLM):
                 self.device = torch.device('cpu')
             self.model = self.model.to(self.device)
         else:
-            self.device = next(self.model.parameters()).device
-    
+            self.device = kwargs.get('device_map')
+
+    @abstractmethod
     def get_prompt(self, prompts: list) -> str:
-        prompt = ''
-        if self.tokenizer.eos_token == None:
-            sep_token = '\n\n'
-        else:
-            sep_token = self.tokenizer.eos_token
-        for message in prompts:
-            role = message['role']
-            content = message['content']
-            if role == 'system':
-                prompt += f'{content}{sep_token}'
-            else: 
-                prompt += f'{role}: {content}{sep_token}'
-        prompt += "assistant:"
-        return prompt
-    
+        pass
+
     def get_token_count(self, prompt: str) -> int:
         count = self.tokenizer(prompt, return_length=True, return_tensors='np')
         return int(count['length'][0])
@@ -96,7 +85,26 @@ class Vicuna(GenerativeLLM):
         return streamer
 
 
-class LLAMA2(Vicuna):
+class Vicuna(LLAMA2BASE):
+
+    def get_prompt(self, prompts: list) -> str:
+        prompt = ''
+        if self.tokenizer.eos_token == None:
+            sep_token = '\n\n'
+        else:
+            sep_token = self.tokenizer.eos_token
+        for message in prompts:
+            role = message['role']
+            content = message['content']
+            if role == 'system':
+                prompt += f'{content}{sep_token}'
+            else: 
+                prompt += f'{role}: {content}{sep_token}'
+        prompt += "assistant:"
+        return prompt
+
+
+class LLAMA2(LLAMA2BASE):
 
     def get_prompt(self, prompts: list) -> str:
         prompt = ''
@@ -109,4 +117,21 @@ class LLAMA2(Vicuna):
                 prompt += f" {content}"
             else: 
                 prompt += f'[INST] {content} [/INST]'
+        return prompt
+
+
+class NousHermes(LLAMA2BASE):
+
+    def get_prompt(self, prompts: list) -> str:
+        prompt = ''
+        for message in prompts:
+            role = message['role']
+            content = message['content']
+            if role == 'input':
+                prompt += f'### Input:\n{content}\n\n'
+            elif role == 'assistant':
+                prompt += f"### Response:\n{content}\n\n"
+            else: 
+                prompt += f'### Instruction:\n{content}\n\n'
+        prompt += "### Response:\n"
         return prompt
