@@ -126,7 +126,7 @@ spec:
     spec:
       containers:
       - name: llm-api-server
-        image: "quay.io/rhn_support_sbekkerm/llm-api-server:latest"
+        image: "quay.io/redhat_emp1/llm-api-server:latest"
         env:
           - name: HOME
             value: /home/llm-api
@@ -176,7 +176,7 @@ oc apply -f deployment.yaml
 oc get pods -n app-llm-api
 ```
 
-## Step 5: Create a Service 
+## Step 6: Create a Service 
 
 To make your LLM API accessible within the OpenShift cluster and from external sources, you need to create a service. Follow these steps to create a service for your deployment:
 

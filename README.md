@@ -6,48 +6,81 @@ This project is built upon the [Ray](https://docs.ray.io/) framework.
 
 ## Supported LLMs
 The LLM API Server supports a range of language models for text encoding and text generation:
-### Text encoding (embedding)
+### Text encoding (embeddings)
 - [Sentence transformers](https://huggingface.co/sentence-transformers)
 - [Instructor](https://huggingface.co/hkunlp/instructor-large)
 
 ### Text generation
 - [Vicuna](https://huggingface.co/lmsys)
 - [LLAMA 2](https://huggingface.co/meta-llama)
+- [Nous-Hermes](https://huggingface.co/NousResearch/Nous-Hermes-Llama2-13b)
 
-## Configuration
+## How to get started
 The LLM API Server utilizes the Ray configuration file format.
 
 To configure the LLM API Server, modify the `args` section within the configuration file:
 
 ```yaml
+# To configure the LLM API Server, modify the `args` section within the configuration file:
+
 args:
   llms:
-    # This section configures text generation LLMs
+    # Configure text generation LLMs for completions
     completions:
-      - name: "/models/completions/Llama-2-13b-chat-hf" # Model weights path
-        class: "llama2" # Implemented class 
-        params: # (Optional) Parameters pass into the model's __init__ method
-          load_in_8bit: True
-          device_map: "cuda:0"
+      - name: "/models/completions/Llama-2-13b-chat-hf" # Path to model weights
+        class: "llama2" # Implemented class for LLM type
+        params: # Optional parameters passed to the model's __init__ method
+          load_in_8bit: True # Example: Load model weights in 8-bit precision
+          device_map: "cuda:0" # Example: GPU device mapping (CUDA)
+
       - name: "/models/completions/vicuna-7b"
         class: "vicuna"
         params:
-          torch_dtype: "auto"
+          torch_dtype: "auto" # Example: Automatically infer torch data type
 
-    # This section configures text embedding LLMs
+    # Configure text embedding LLMs
     embedding:
       - name: "/models/embeddings/instructor-large"
-        class: "sentence-transformers"
+        class: "sentence-transformers" # Example: Sentence transformers for embedding
+        # Additional parameters specific to the embedding LLM can be added here
+
       - name: "/models/embeddings/all-MiniLM-L6-v2"
         class: "sentence-transformers"
+        # Additional parameters specific to the embedding LLM can be added here
 ```
-In this configuration, you have the flexibility to specify text generation LLMs (completions), text embedding LLMs (embedding), or both. 
-For each type of LLM, you can define multiple models using their name, class, and additional params if needed.
+
+Parameters Explanation
+----------------------
+
+#### `name`
+
+*   Path to model weights or the repository name on Hugging Face.
+
+#### `class`
+
+*   Implemented class for the LLM type. Supported values include:
+    *   'llama2'
+    *   'vicuna'
+    *   'sentence-transformers'
+    *   'nous-hermes'
+
+#### `params`
+
+*   Optional parameters passed to the `__init__` method of the specified class.
+
+  For example:
+
+  *   `load_in_8bit`: Load model weights in 8-bit precision.
+  *   `device_map`: GPU device mapping (e.g., "cuda:0").
+
+In this configuration, you have the flexibility to specify text generation LLMs (completions), text embedding LLMs (embedding), or both. For each type of LLM, you can define multiple models using their name, class, and additional params if needed.
 
 ## Deployment
+
 ### Run the application as a Podman local container
+
  1. Download the pre-trained LLM weights from the respective model repositories and save them in a folder, for example `./models`
- 2. Build the container. 
+ 2. Build the container.
     Use the provided Dockerfile to build the container image:
   ```bash
     $ podman build -t llm-api-server:latest .
