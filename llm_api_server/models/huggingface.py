@@ -14,9 +14,22 @@ class LLAMA2BASE(GenerativeLLM):
     def __init__(self, model_name: str, **kwargs) -> None:
         self.model_name = model_name
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+        params_override_dict = {
+                "torch.bfloat16": torch.bfloat16,
+                "torch.half": torch.half,
+                "torch.float": torch.float,
+                "torch.float16": torch.float16,
+                "torch.float32": torch.float32,
+            }
+
+        for key, value in kwargs.items():
+            if value in params_override_dict:
+                kwargs[key] = params_override_dict[value]
+
         self.model = AutoModelForCausalLM.from_pretrained(self.model_name, **kwargs)
-        
-        if kwargs.get('device_map', None) == None:
+        self.model = torch.compile(self.model, mode="reduce-overhead", fullgraph=True)
+
+        if kwargs.get('device_map', None) is None:
             if torch.cuda.is_available():
                 self.device = torch.device('cuda:0')
             else:

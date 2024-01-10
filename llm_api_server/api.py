@@ -222,16 +222,17 @@ class API:
         for model_tasks, models_list in models_dict.items():
             for model_params in models_list:
                 model_name = model_params['name']
-                if model_name != '':
+                if model_name:
                     model_class = MODEL_CLASS_MAPPING.get(model_params['class'])
-                    if model_params.get('params', None) is not None:
-                        model = model_class(model_name, **model_params['params'])
-                    else:
-                        model = model_class(model_name)
-                    if model_tasks == 'completions':
-                        self.completions_models_obj_dict[model_name] = model
-                    elif model_tasks == 'embedding':
-                        self.embedding_models_obj_dict[model_name] = model
+                    model = model_class(model_name, **model_params.get('params', {}))
+                    
+                    task_dictionary = {
+                        'completions': self.completions_models_obj_dict,
+                        'embedding': self.embedding_models_obj_dict
+
+                    }
+                    if model_tasks in task_dictionary:
+                        task_dictionary[model_tasks][model_name] = model
                     model_device = model.device
                     self.models_card_list.append({
                         "id": model_name,
@@ -239,8 +240,7 @@ class API:
                         "owned_by": "Open Source",
                         "permission": "Public"
                     })
-                    logger.info(f'The model {model_name} has been '\
-                                f'successfully loaded on device "{model_device}"')
+                    logger.info(f'Model "{model_name}" loaded on device "{model_device}"')
 
     def get_model_by_name(self, model_name:str, model_task: str) -> object:
         if model_task == 'embeddings':
