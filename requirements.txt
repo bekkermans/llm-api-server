@@ -1,6 +1,7 @@
+starlette=0.33.0
 requests>=2.31.0
-torch>=2.0.1
-transformers>=4.31.0
+torch>=2.1.1
+transformers>=4.36.0
 sentence_transformers>=2.2.2
 InstructorEmbedding>=1.0.1
 fastapi>=0.100.0
@@ -8,6 +9,7 @@ python-multipart>=0.0.6
 accelerate>=0.21.0
 bitsandbytes>=0.41.1
 ray[serve]>=2.6.1
-pydantic==1.10.9
+pydantic>=1.10.9
+vllm==0.2.7
 tiktoken
 GPUtil
