@@ -1,7 +1,11 @@
 import torch
+import asyncio
+
 from abc import abstractmethod
+
+from transformers.models.auto import AutoTokenizer
 from api_spec import ChatCompletionsRequest
-from threading import Thread
+
 from typing import AsyncGenerator
 from transformers import (AutoModelForCausalLM, 
                           TextIteratorStreamer, 
@@ -60,7 +64,8 @@ class LLAMA2BASE(GenerativeLLM):
             max_new_tokens=request.max_tokens,
             do_sample=request.temperature >= 1e-3,
             temperature=request.temperature,
-            top_p=request.top_p)
+            top_p=request.top_p,
+            pad_token_id=self.tokenizer.eos_token_id)
 
         for _ in range(request.n):
             output_ids = self.model.generate(**input_ids, 
@@ -84,17 +89,18 @@ class LLAMA2BASE(GenerativeLLM):
         max_new_tokens=request.max_tokens,
         do_sample=request.temperature >= 1e-3,
         temperature=request.temperature,
-        top_p=request.top_p)
+        top_p=request.top_p,
+        pad_token_id=self.tokenizer.eos_token_id)
+
         decode_config = dict(skip_special_tokens=True, 
                              spaces_between_special_tokens=False,
                              skip_prompt=True)
         streamer = TextIteratorStreamer(self.tokenizer, **decode_config)
         input_ids = self.tokenizer(prompt, return_tensors="pt")
         input_ids = {k: v.to(self.device) for k, v in input_ids.items()}
-        generation_kwargs = dict(input_ids, streamer=streamer,
+        generation_kwargs = dict(**input_ids, streamer=streamer,
                                 generation_config=generation_config)
-        thread = Thread(target=self.model.generate, kwargs=generation_kwargs)
-        thread.start()
+        await asyncio.to_thread(self.model.generate, **generation_kwargs)
         for token in streamer:
             yield token
 

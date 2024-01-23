@@ -7,7 +7,7 @@ from starlette.responses import JSONResponse, StreamingResponse
 from fastapi import FastAPI
 
 from models.vllm import MistralFast, LLAMA2Fast
-from models.huggingface import Vicuna, LLAMA2, NousHermes
+from models.huggingface import Vicuna, LLAMA2, NousHermes, Mistral
 from models.sentence_llm import SentenceLLM
 from api_spec import (
     EmbeddingsRequest,
@@ -31,8 +31,9 @@ MODEL_CLASS_MAPPING = {
     "llama2": LLAMA2,
     "sentence-transformers": SentenceLLM,
     "nous-hermes": NousHermes,
-    "vllm-Mistral": MistralFast,
-    "vllm-LLAMA2": LLAMA2Fast
+    "mistral": Mistral,
+    "vllm-mistral": MistralFast,
+    "vllm-llama2": LLAMA2Fast
 }
 
 

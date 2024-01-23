@@ -1,7 +1,7 @@
 import torch
 import uuid
 from abc import abstractmethod
-from typing import AsyncGenerator, Generator
+from typing import AsyncGenerator
 from models.base import GenerativeLLM
 from api_spec import ChatCompletionsRequest
 from transformers import AutoTokenizer
@@ -82,7 +82,7 @@ class vLLM(GenerativeLLM):
         return results
 
     @torch.inference_mode()
-    async def generate_stream(self, request: ChatCompletionsRequest) -> Generator:
+    async def generate_stream(self, request: ChatCompletionsRequest) -> AsyncGenerator:
         prompt_tokens = 0
         prompt = self.get_prompt(request.messages)
         input_ids = self.tokenizer.encode(prompt)
