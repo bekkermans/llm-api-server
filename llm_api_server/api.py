@@ -6,7 +6,8 @@ import tiktoken
 from starlette.responses import JSONResponse, StreamingResponse
 from fastapi import FastAPI
 
-from models.huggingface import Vicuna, LLAMA2, NousHermes
+from models.vllm import MistralFast, LLAMA2Fast
+from models.huggingface import Vicuna, LLAMA2, NousHermes, Mistral
 from models.sentence_llm import SentenceLLM
 from api_spec import (
     EmbeddingsRequest,
@@ -29,7 +30,10 @@ MODEL_CLASS_MAPPING = {
     "vicuna": Vicuna,
     "llama2": LLAMA2,
     "sentence-transformers": SentenceLLM,
-    "nous-hermes": NousHermes
+    "nous-hermes": NousHermes,
+    "mistral": Mistral,
+    "vllm-mistral": MistralFast,
+    "vllm-llama2": LLAMA2Fast
 }
 
 
@@ -177,12 +181,13 @@ class API:
             ModelsResponse(data=self.models_card_list).dict()
         )
 
-    def stream_generation(self, request, compl_model, chat_id, 
+    async def stream_generation(self, request, compl_model, chat_id, 
                           chat_completions=True):
         model_name = request.model
         for k in range(request.n):
             stream_gen = compl_model.generate_stream(request)
-            for i, token in enumerate(stream_gen):
+            i = 0
+            async for token in stream_gen:
                 cur_time = int(time.time())
                 if chat_completions:
                     if i == 0:
@@ -201,6 +206,7 @@ class API:
                             "choices": choises_list,
                             "model": model_name,
                         }
+                    i += 1
                 else:
                     choises_list = [{
                             "index": k,
