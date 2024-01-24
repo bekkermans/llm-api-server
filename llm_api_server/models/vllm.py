@@ -35,7 +35,7 @@ class vLLM(GenerativeLLM):
             load_format=kwargs.get('load_format', 'auto'),
             tensor_parallel_size=kwargs.get('tensor_parallel_size', 1),
             quantization=kwargs.get('quantization', None),
-            enforce_eager=kwargs.get('quantization', False),
+            enforce_eager=kwargs.get('enforce_eager', False),
             seed=kwargs.get('seed', 0),
             disable_log_requests=kwargs.get('disable_logging', True),
             disable_log_stats=kwargs.get('disable_logging', True),
