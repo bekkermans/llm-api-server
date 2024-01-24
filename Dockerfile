@@ -1,5 +1,5 @@
 
-FROM nvcr.io/nvidia/cuda:11.8.0-base-ubi8
+FROM nvcr.io/nvidia/cuda:12.3.1-base-ubi9
 
 ENV CONFIG_FILE_NAME config.yaml
 ENV RAY_SERVE_ENABLE_EXPERIMENTAL_STREAMING 1
@@ -7,8 +7,8 @@ ENV RAY_SERVE_ENABLE_EXPERIMENTAL_STREAMING 1
 # Install python 
 RUN yum update -y && \
     yum install -y \
-    python39 \
-    python39-devel && \
+    python \
+    python-devel && \
     rm -rf /var/cache/yum
 
 # Install python libraries
