@@ -6,7 +6,7 @@ import tiktoken
 from starlette.responses import JSONResponse, StreamingResponse
 from fastapi import FastAPI
 
-from models.vllm import MistralFast, LLAMA2Fast
+from models.vllm import MistralFast, LLAMA2Fast, MerliniteFast
 from models.huggingface import Vicuna, LLAMA2, NousHermes, Mistral
 from models.sentence_llm import SentenceLLM
 from api_spec import (
@@ -33,7 +33,8 @@ MODEL_CLASS_MAPPING = {
     "nous-hermes": NousHermes,
     "mistral": Mistral,
     "vllm-mistral": MistralFast,
-    "vllm-llama2": LLAMA2Fast
+    "vllm-llama2": LLAMA2Fast,
+    "vllm-merlinite": MerliniteFast
 }
 
 
