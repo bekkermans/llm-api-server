@@ -11,6 +11,7 @@ The LLM API Server supports a range of language models for text encoding and tex
 - [Instructor](https://huggingface.co/hkunlp/instructor-large)
 
 ### Text generation
+- [Merlinite](https://huggingface.co/ibm/merlinite-7b)
 - [Vicuna](https://huggingface.co/lmsys)
 - [LLAMA 2](https://huggingface.co/meta-llama)
 - [Nous-Hermes](https://huggingface.co/NousResearch/Nous-Hermes-Llama2-13b)

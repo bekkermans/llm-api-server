@@ -130,3 +130,17 @@ class LLAMA2Fast(vLLM):
             else: 
                 prompt += f'[INST] {content} [/INST]'
         return prompt
+
+class MerliniteFast(vLLM):
+    def get_prompt(self, prompts: list) -> str:
+        prompt = ''
+        for message in prompts:
+            role = message['role']
+            content = message['content']
+            if role == 'system':
+                prompt += f'<|system|>\n{content}\n'
+            elif role == 'assistant':
+                prompt += f"{content}"
+            else: 
+                prompt += f'<|user|>\n{content}\n<|assistant|>\n'
+        return prompt
